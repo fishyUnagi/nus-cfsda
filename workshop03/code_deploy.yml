@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-deploy
+  namespace: codens
+  labels:
+    app: codeapp
+    name: code-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codeapp
+      name: code-po
+  template:
+    metadata:
+      name: code-po
+      labels:
+        app: codeapp
+        name: code-po
+    spec:
+      volumes:
+        - name: code-storage
+          persistentVolumeClaim:
+            claimName: code-pvc
+      containers:
+        - name: code-container
+          resources:
+            limits:
+              memory: 1Gi
+              cpu: 1
+          image: lscr.io/linuxserver/code-server:latest
+          envFrom:
+          - secretRef:
+              name: codeapp-secret
+          - configMapRef:
+              name: codeapp-cm
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /config/workspace
+              name: code-storage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-svc
+  namespace: codens
+  labels:
+    app: codeapp
+    name: code-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: codeapp
+    name: code-po
+  ports:
+  - port: 80
+    targetPort: 8443
